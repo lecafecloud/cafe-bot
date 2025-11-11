@@ -1,0 +1,4 @@
+name: cafe-bot
+runtime: nodejs
+description: Deploy Discord Cafe Bot to ECS Fargate
+main: infra/index.js
