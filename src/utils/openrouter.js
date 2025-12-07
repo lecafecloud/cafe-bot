@@ -2,55 +2,49 @@ import logger from './logger.js';
 
 const OPENROUTER_API_URL = 'https://openrouter.ai/api/v1/chat/completions';
 
+// Filtre les questions par canal et garde les scores pour le feedback
+export function filterQuestionsByChannel(questions, channelName) {
+    return questions
+        .filter(q => q.channel === channelName)
+        .map(q => ({ question: q.question, score: q.score || 0 }));
+}
+
 export async function generateTechQuestion(channelName = '', channelTopic = '', previousQuestions = []) {
     logger.info(`[DEBUG] generateTechQuestion called for channel: ${channelName}`);
     logger.info(`[DEBUG] Previous questions count: ${previousQuestions.length}`);
-    // Build a very specific prompt based on the channel
-    const channelInfo = `Canal: "${channelName}"${channelTopic ? `, Description: "${channelTopic}"` : ''}`;
 
-    // Add previous questions info to the prompt - use more history
-    const historyInfo = previousQuestions.length > 0
-        ? `\n\n⚠️ QUESTIONS DÉJÀ POSÉES (NE JAMAIS RÉPÉTER CES QUESTIONS OU LEURS VARIANTES):\n${previousQuestions.slice(-20).map((q, i) => `${i+1}. ${q}`).join('\n')}`
-        : '';
-
-    const prompts = [
-        `${channelInfo}\n\nGénère une question COURTE et DIRECTE (maximum 15 mots) pour stimuler la discussion.\n\nExemples de bonnes questions courtes:\n- "Quelle stack de monitoring utilisez-vous et pourquoi?"\n- "Votre pire incident en prod cette année?"\n- "Comment gérez-vous les secrets en production?"\n- "Team Terraform ou Pulumi?"\n- "Votre meilleur hack DevOps récent?"\n\nLa question doit être PERTINENTE pour le canal et FACILE à répondre rapidement.${historyInfo}`,
-        `${channelInfo}\n\nGénère une question de RETOUR D'EXPÉRIENCE très COURTE (max 12 mots).\n\nExemples:\n- "Votre plus grosse galère récente?"\n- "Un outil qui a changé votre workflow?"\n- "Votre migration la plus complexe?"\n\nDOIT être en rapport avec le canal. Sois DIRECT et CONCIS.${historyInfo}`
-    ];
-
-    const selectedPrompt = prompts[Math.floor(Math.random() * prompts.length)];
-
-    // Get current date for context
     const currentYear = new Date().getFullYear();
+    const channelInfo = `Canal: "${channelName}"${channelTopic ? ` - ${channelTopic}` : ''}`;
 
-    // Build the complete system message
-    const systemMessage = `Tu es un animateur Discord DevOps. Génère des questions COURTES et ENGAGEANTES.
+    // Historique du canal avec scores (format: question [score: +X/-X])
+    const formatHistory = (questions) => {
+        if (questions.length === 0) return '';
+        const sorted = [...questions].sort((a, b) => b.score - a.score); // Best scores first
+        const formatted = sorted.slice(-50).map((q, i) => {
+            const scoreStr = q.score > 0 ? `+${q.score}` : q.score.toString();
+            return `${i+1}. [${scoreStr}] ${q.question}`;
+        }).join('\n');
+        return `\n\nHistorique (score = upvotes - downvotes, inspire-toi des scores positifs):\n${formatted}`;
+    };
 
-Note: Nous sommes en ${currentYear}.
+    const historySection = formatHistory(previousQuestions);
 
-Règles CRITIQUES:
-1. MAXIMUM 15 mots par question
-2. Style direct et casual (pas trop formel)
-3. Questions qui appellent au partage d'expérience
-4. DOIT correspondre au thème du canal
-5. ⚠️ IMPÉRATIF: Ne JAMAIS poser une question similaire ou variante d'une question déjà posée
+    const systemMessage = `Tu es un animateur Discord DevOps/Cloud. Année: ${currentYear}.
 
-Par canal:
-- "network/réseau" → VPC, DNS, load balancing, CDN
-- "monitoring" → Prometheus, Grafana, logs, alerting
-- "containers" → Docker, Kubernetes, Helm
-- "cloud" → AWS, Azure, GCP
-- "pipeline/CI-CD" → Jenkins, GitLab CI, GitHub Actions
-- "sécurité" → IAM, secrets, RBAC, scanning
+Génère UNE question courte (max 15 mots), originale et engageante pour le canal "${channelName}".
 
-Exemples de bonnes questions:
-- "Votre fail Kubernetes préféré?"
-- "Team Docker ou Podman?"
-- "Comment surveillez-vous vos coûts cloud?"` + (previousQuestions && previousQuestions.length > 0 ? `\n\n⚠️⚠️⚠️ QUESTIONS INTERDITES (NE JAMAIS POSER CES QUESTIONS OU DES VARIANTES SIMILAIRES) ⚠️⚠️⚠️:\n${previousQuestions.slice(-20).map((q, i) => `${i+1}. ${q}`).join('\n')}\n\n>>> Tu DOIS générer une question COMPLÈTEMENT DIFFÉRENTE de toutes celles ci-dessus <<<` : '');
+Règles:
+- Pertinent pour le canal
+- Appelle au partage d'expérience
+- Inspire-toi du STYLE des questions avec scores positifs
+- Évite le style des questions avec scores négatifs
+- Pas de question déjà posée${historySection}`;
+
+    const userPrompt = `${channelInfo}\n\nGénère une question de discussion unique et engageante.`;
 
     logger.info('[DEBUG] ========== RAW PROMPT TO AI ==========');
-    logger.info(`[DEBUG] System Message: ${systemMessage.substring(0, 500)}...`);
-    logger.info(`[DEBUG] User Prompt: ${selectedPrompt}`);
+    logger.info(`[DEBUG] System Message: ${systemMessage}`);
+    logger.info(`[DEBUG] User Prompt: ${userPrompt}`);
     logger.info('[DEBUG] ========================================');
 
     try {
@@ -79,7 +73,7 @@ Exemples de bonnes questions:
                     },
                     {
                         role: 'user',
-                        content: selectedPrompt
+                        content: userPrompt
                     }
                 ],
                 temperature: 1.0,  // Maximum creativity to avoid repetition

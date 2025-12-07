@@ -43,14 +43,21 @@ export async function fetchExistingBotMessages(client, guildId, categoryId, limi
                             // Remove leading emojis like 📦, 🔐, ☁️, etc.
                             question = question.replace(/^[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]+\s*/gu, '');
 
-                            // Store the clean question
+                            // Get vote score from reactions (upvote - downvote)
+                            const upvotes = message.reactions.cache.get('⬆️')?.count || 0;
+                            const downvotes = message.reactions.cache.get('⬇️')?.count || 0;
+                            // Subtract 1 from each to exclude bot's own reactions
+                            const score = (upvotes > 0 ? upvotes - 1 : 0) - (downvotes > 0 ? downvotes - 1 : 0);
+
+                            // Store the clean question with score
                             questions.push({
                                 question: question,
                                 channel: channel.name,
-                                timestamp: message.createdAt.toISOString()
+                                timestamp: message.createdAt.toISOString(),
+                                score: score
                             });
 
-                            logger.info(`Found question: ${question.substring(0, 60)}...`);
+                            logger.info(`Found question (score: ${score}): ${question.substring(0, 50)}...`);
                         }
                     }
                 }

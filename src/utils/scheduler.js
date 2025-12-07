@@ -1,7 +1,8 @@
 import cron from 'node-cron';
 import logger from './logger.js';
-import { generateTechQuestion } from './openrouter.js';
+import { generateTechQuestion, filterQuestionsByChannel } from './openrouter.js';
 import { fetchExistingBotMessages } from './questionHistory.js';
+import { collectWeeklyMessages, collectWeeklyQuestions, generateWeeklyDigest } from './weeklyDigest.js';
 import { EmbedBuilder, AttachmentBuilder } from 'discord.js';
 import config from '../config/config.js';
 import path from 'path';
@@ -12,6 +13,7 @@ const __dirname = path.dirname(__filename);
 
 const CATEGORY_ID = '1387175784862716115';
 const SERVER_ID = '1387172171872211045';
+const DIGEST_CHANNEL_ID = '1387177709406519366';
 
 export function initializeScheduler(client) {
     // Schedule daily post at 13:00 Paris time (Europe/Paris timezone)
@@ -43,9 +45,23 @@ export function initializeScheduler(client) {
         scheduled: true
     });
 
-    logger.info('[CRON] Scheduler initialized - Daily post at 13:00 and server tag reminder at 05:00 Paris time');
+    // Schedule weekly digest on Sunday at 12:00 Paris time
+    const weeklyDigestTask = cron.schedule('0 12 * * 0', async () => {
+        logger.info('[CRON] Starting weekly digest post at Sunday 12:00 Paris time');
 
-    return { techDiscussionTask, serverTagTask };
+        try {
+            await postWeeklyDigest(client);
+        } catch (error) {
+            logger.error('[CRON] Failed to post weekly digest:', error);
+        }
+    }, {
+        timezone: "Europe/Paris",
+        scheduled: true
+    });
+
+    logger.info('[CRON] Scheduler initialized - Daily post at 13:00, server tag at 05:00, weekly digest Sunday 12:00 Paris time');
+
+    return { techDiscussionTask, serverTagTask, weeklyDigestTask };
 }
 
 async function postScheduledDiscussion(client) {
@@ -87,11 +103,12 @@ async function postScheduledDiscussion(client) {
             50
         );
 
-        // Generate question tailored to this channel
+        // Generate question tailored to this channel - only use history from this channel
+        const channelHistory = filterQuestionsByChannel(discordHistory, randomChannel.name);
         const question = await generateTechQuestion(
             randomChannel.name,
             randomChannel.topic,
-            discordHistory.map(h => h.question)
+            channelHistory
         );
 
         logger.info(`[CRON] Generated question: ${question.substring(0, 50)}...`);
@@ -103,7 +120,7 @@ async function postScheduledDiscussion(client) {
             .setColor(config.colors.primary)
             .addFields({
                 name: '\u200B',
-                value: '👍 Question intéressante !\n🤔 Curieux de lire vos retours d\'expérience',
+                value: '⬆️ Question pertinente\n⬇️ Pas pertinent',
                 inline: false
             })
             .setFooter({
@@ -115,11 +132,9 @@ async function postScheduledDiscussion(client) {
         // Send the message
         const sentMessage = await randomChannel.send({ embeds: [embed] });
 
-        // Add reactions
-        const reactions = ['👍', '🤔'];
-        for (const reaction of reactions) {
-            await sentMessage.react(reaction).catch(() => {});
-        }
+        // Add upvote/downvote reactions
+        await sentMessage.react('⬆️').catch(() => {});
+        await sentMessage.react('⬇️').catch(() => {});
 
         logger.info(`[CRON] Successfully posted scheduled discussion in ${randomChannel.name}`);
 
@@ -203,5 +218,64 @@ async function postServerTagReminder(client) {
 
     } catch (error) {
         logger.error('[CRON] Error in server tag reminder post:', error);
+    }
+}
+
+// Exporté pour utilisation par la commande /weekly-digest
+export async function postWeeklyDigest(client) {
+    try {
+        const guild = client.guilds.cache.get(SERVER_ID);
+        if (!guild) {
+            logger.error('[DIGEST] Server not found');
+            return { success: false, error: 'Server not found' };
+        }
+
+        const digestChannel = guild.channels.cache.get(DIGEST_CHANNEL_ID);
+        if (!digestChannel) {
+            logger.error('[DIGEST] Digest channel not found');
+            return { success: false, error: 'Digest channel not found' };
+        }
+
+        logger.info('[DIGEST] Collecting weekly messages...');
+
+        // Collecter les données de la semaine
+        const messages = await collectWeeklyMessages(client, SERVER_ID, CATEGORY_ID, 7);
+        const questions = await collectWeeklyQuestions(client, SERVER_ID, CATEGORY_ID, 7);
+
+        if (messages.length === 0 && questions.length === 0) {
+            logger.info('[DIGEST] No activity this week, skipping digest');
+            return { success: false, error: 'No activity this week' };
+        }
+
+        logger.info(`[DIGEST] Found ${messages.length} messages and ${questions.length} questions`);
+
+        // Générer le digest
+        const digestContent = await generateWeeklyDigest(messages, questions);
+
+        if (!digestContent) {
+            logger.error('[DIGEST] Failed to generate digest content');
+            return { success: false, error: 'Failed to generate digest' };
+        }
+
+        // Créer l'embed
+        const embed = new EmbedBuilder()
+            .setTitle('📊 Weekly Digest - Le Café Cloud')
+            .setDescription(digestContent)
+            .setColor(config.colors.primary)
+            .setFooter({
+                text: `Semaine du ${new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toLocaleDateString('fr-FR')} au ${new Date().toLocaleDateString('fr-FR')}`,
+                iconURL: client.user.displayAvatarURL()
+            })
+            .setTimestamp();
+
+        // Poster le digest
+        await digestChannel.send({ embeds: [embed] });
+
+        logger.info(`[DIGEST] Successfully posted weekly digest in ${digestChannel.name}`);
+        return { success: true };
+
+    } catch (error) {
+        logger.error('[DIGEST] Error posting weekly digest:', error);
+        return { success: false, error: error.message };
     }
 }

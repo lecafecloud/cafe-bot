@@ -1,6 +1,6 @@
 import { SlashCommandBuilder, PermissionFlagsBits } from 'discord.js';
 import config from '../../config/config.js';
-import { generateTechQuestion } from '../../utils/openrouter.js';
+import { generateTechQuestion, filterQuestionsByChannel } from '../../utils/openrouter.js';
 import logger from '../../utils/logger.js';
 import { addQuestionToHistory, fetchExistingBotMessages } from '../../utils/questionHistory.js';
 
@@ -129,13 +129,15 @@ async function postDiscussion(client, guild) {
         );
         const fullHistory = discordHistory;
 
-        // Generate question tailored to this channel
+        // Generate question tailored to this channel - only use history from this channel
+        const channelHistory = filterQuestionsByChannel(fullHistory, randomChannel.name);
+
         let question;
         try {
             question = await generateTechQuestion(
                 randomChannel.name,
                 randomChannel.topic,
-                fullHistory.map(h => h.question)
+                channelHistory
             );
         } catch (error) {
             logger.error('[CRITICAL] Auto-discussion failed to generate question:', error);
@@ -152,7 +154,7 @@ async function postDiscussion(client, guild) {
             color: config.colors.primary,
             fields: [{
                 name: '\u200B',
-                value: '👍 Question intéressante !\n🤔 Curieux de lire vos retours d\'expérience',
+                value: '⬆️ Question pertinente\n⬇️ Pas pertinent',
                 inline: false
             }],
             footer: {
@@ -164,11 +166,9 @@ async function postDiscussion(client, guild) {
 
         const sentMessage = await randomChannel.send({ embeds: [embed] });
 
-        // Add reactions for engagement
-        const reactions = ['👍', '🤔'];
-        for (const reaction of reactions) {
-            await sentMessage.react(reaction).catch(() => {});
-        }
+        // Add upvote/downvote reactions
+        await sentMessage.react('⬆️').catch(() => {});
+        await sentMessage.react('⬇️').catch(() => {});
 
         logger.info(`Auto-discussion posted in ${randomChannel.name}`);
 

@@ -1,6 +1,6 @@
 import { SlashCommandBuilder, EmbedBuilder, PermissionFlagsBits } from 'discord.js';
 import config from '../../config/config.js';
-import { generateTechQuestion } from '../../utils/openrouter.js';
+import { generateTechQuestion, filterQuestionsByChannel } from '../../utils/openrouter.js';
 import logger from '../../utils/logger.js';
 import { addQuestionToHistory, fetchExistingBotMessages } from '../../utils/questionHistory.js';
 
@@ -90,12 +90,15 @@ export default {
 
             // Generate question tailored to this channel
             logger.info('[DEBUG] Generating tech question for channel...');
+            const channelHistory = filterQuestionsByChannel(fullHistory, randomChannel.name);
+            logger.info(`[DEBUG] Filtered history for ${randomChannel.name}: ${channelHistory.length} questions`);
+
             let question;
             try {
                 question = await generateTechQuestion(
                     randomChannel.name,
                     randomChannel.topic,
-                    fullHistory.map(h => h.question)
+                    channelHistory
                 );
                 logger.info(`[DEBUG] Question generated: ${question.substring(0, 50)}...`);
             } catch (apiError) {
@@ -118,7 +121,7 @@ export default {
                 .setColor(config.colors.primary)
                 .addFields({
                     name: '\u200B',
-                    value: '👍 Question intéressante !\n🤔 Curieux de lire vos retours d\'expérience',
+                    value: '⬆️ Question pertinente\n⬇️ Pas pertinent',
                     inline: false
                 })
                 .setFooter({
@@ -132,11 +135,9 @@ export default {
             const sentMessage = await randomChannel.send({ embeds: [embed] });
             logger.info('[DEBUG] Message sent successfully');
 
-            // Add reactions for engagement
-            const reactions = ['👍', '🤔'];
-            for (const reaction of reactions) {
-                await sentMessage.react(reaction).catch(() => {});
-            }
+            // Add upvote/downvote reactions
+            await sentMessage.react('⬆️').catch(() => {});
+            await sentMessage.react('⬇️').catch(() => {});
 
             // Confirm to the user
             await interaction.editReply({
