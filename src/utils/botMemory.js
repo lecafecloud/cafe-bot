@@ -11,6 +11,8 @@ let botMemo = ''; // memo about the bot itself
 let channel = null;
 let client = null;
 let messageIds = { users: [], channels: [], bot: null }; // Track message IDs for updates
+let saveTimeout = null; // Debounce timer for saves
+let isSaving = false; // Lock to prevent concurrent saves
 
 /**
  * Initialize the memory system
@@ -82,10 +84,23 @@ async function loadMemoriesFromChannel() {
 }
 
 /**
- * Save all memories to Discord
+ * Schedule a debounced save (waits 2s for all updates to finish)
  */
-async function saveMemories() {
-    if (!channel) return;
+function scheduleSave() {
+    if (saveTimeout) {
+        clearTimeout(saveTimeout);
+    }
+    saveTimeout = setTimeout(() => {
+        saveMemoriesNow();
+    }, 2000);
+}
+
+/**
+ * Save all memories to Discord (actual save)
+ */
+async function saveMemoriesNow() {
+    if (!channel || isSaving) return;
+    isSaving = true;
 
     try {
         // Delete old memo messages
@@ -133,6 +148,8 @@ async function saveMemories() {
         logger.debug(`Bot Memory: Saved ${userMemos.size} user memos, ${channelMemos.size} channel memos, bot memo: ${botMemo ? 'yes' : 'no'}`);
     } catch (error) {
         logger.error('Bot Memory: Failed to save', error);
+    } finally {
+        isSaving = false;
     }
 }
 
@@ -286,7 +303,7 @@ Nouveau mémo:`
 
         if (newMemo && newMemo.length <= MAX_MEMO_LENGTH) {
             userMemos.set(userId, newMemo);
-            await saveMemories();
+            scheduleSave();
             logger.info(`Bot Memory: Updated memo for ${username}: ${newMemo.substring(0, 50)}...`);
         }
     } catch (error) {
@@ -348,7 +365,7 @@ Règles:
 
         if (newMemo && newMemo.length <= MAX_MEMO_LENGTH) {
             channelMemos.set(channelId, newMemo);
-            await saveMemories();
+            scheduleSave();
             logger.info(`Bot Memory: Updated memo for #${channelName}: ${newMemo.substring(0, 50)}...`);
         }
     } catch (error) {
@@ -412,7 +429,7 @@ Nouveau mémo:`
 
         if (newMemo && newMemo.length <= MAX_MEMO_LENGTH) {
             botMemo = newMemo;
-            await saveMemories();
+            scheduleSave();
             logger.info(`Bot Memory: Updated bot memo: ${newMemo.substring(0, 50)}...`);
         }
     } catch (error) {
