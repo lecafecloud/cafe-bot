@@ -380,9 +380,9 @@ export async function updateUserMemo(userId, username, userMessage, botResponse)
 Mémo actuel: "${currentMemo || 'vide'}"
 
 Règles:
-- Garde UNIQUEMENT les infos mentionnées: job, technos, préférences
+- Garde les infos mentionnées: job, technos, entreprise, projets, préférences
+- Écris des phrases complètes et naturelles
 - Fusionne avec l'existant, pas de redondance
-- Format: mots-clés séparés par virgules
 - N'INVENTE RIEN, garde seulement ce qui est explicitement dit
 - Si rien de nouveau, retourne le mémo actuel tel quel`
                     },
@@ -447,8 +447,8 @@ export async function updateChannelMemo(channelId, channelName, recentContext) {
 Mémo actuel: "${currentMemo || 'vide'}"
 
 Règles:
-- Résume le contexte/thème des discussions récentes
-- Format: mots-clés et thèmes séparés par virgules
+- Résume le contexte et les sujets des discussions récentes
+- Écris des phrases complètes décrivant l'ambiance et les thèmes
 - N'INVENTE RIEN, base-toi uniquement sur le contenu
 - Si rien de nouveau, retourne le mémo actuel tel quel`
                     },
@@ -510,7 +510,7 @@ Mémo actuel: "${botMemo || 'vide'}"
 Règles:
 - Retiens ce qu'on dit AU bot sur lui-même (son nom, ses préférences, son rôle, des corrections)
 - Retiens les feedbacks sur son comportement
-- Format: mots-clés séparés par virgules
+- Écris des phrases complètes et naturelles
 - N'INVENTE RIEN, garde seulement ce qui est explicitement dit
 - Retourne TOUJOURS un mémo, même si quasi identique`
                     },

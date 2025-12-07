@@ -166,11 +166,11 @@ async function generateChannelMemo(channelName, messages) {
                 messages: [
                     {
                         role: 'system',
-                        content: `Analyse ces messages Discord et génère un mémo COURT (max ${MAX_MEMO_LENGTH} chars) décrivant le thème/sujet du channel.
+                        content: `Analyse ces messages Discord et génère un mémo (max ${MAX_MEMO_LENGTH} chars) décrivant le thème et l'ambiance du channel.
 
 Règles:
-- Pas de phrases complètes, que des mots-clés et thèmes
-- Format: mots-clés séparés par virgules
+- Écris des phrases complètes et naturelles
+- Décris les sujets abordés et le type de discussions
 - N'INVENTE RIEN, base-toi uniquement sur le contenu réel`
                     },
                     {
@@ -220,12 +220,12 @@ async function generateUserMemo(username, messages) {
                 messages: [
                     {
                         role: 'system',
-                        content: `Analyse ces messages d'un utilisateur Discord et génère un mémo COURT (max ${MAX_MEMO_LENGTH} chars) le décrivant.
+                        content: `Analyse ces messages d'un utilisateur Discord et génère un mémo (max ${MAX_MEMO_LENGTH} chars) le décrivant.
 
 Règles:
-- Identifie: métier, technos, entreprise, centres d'intérêt
+- Écris des phrases complètes et naturelles
+- Identifie: métier, technos, entreprise, projets, centres d'intérêt
 - Si pas d'info claire sur un aspect, NE L'INVENTE PAS
-- Format: mots-clés séparés par virgules
 - Base-toi UNIQUEMENT sur ce qu'il dit, pas de suppositions`
                     },
                     {
