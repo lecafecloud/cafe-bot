@@ -43,6 +43,9 @@ async function loadMemoriesFromChannel() {
     try {
         const messages = await channel.messages.fetch({ limit: 100 });
 
+        // Collect all memo messages for cleanup
+        const allMemoMessages = { users: [], channels: [], bot: [] };
+
         for (const [msgId, message] of messages) {
             if (message.author.id !== client.user.id) continue;
             if (!message.content.startsWith('📝 MEMO_')) continue;
@@ -52,8 +55,7 @@ async function loadMemoriesFromChannel() {
                 const header = lines[0];
 
                 if (header.startsWith('📝 MEMO_USERS_')) {
-                    // Parse user memos
-                    messageIds.users.push(msgId);
+                    allMemoMessages.users.push({ msgId, message, timestamp: message.createdTimestamp });
                     for (let i = 1; i < lines.length; i++) {
                         const match = lines[i].match(/^(\d+): (.+)$/);
                         if (match) {
@@ -61,8 +63,7 @@ async function loadMemoriesFromChannel() {
                         }
                     }
                 } else if (header.startsWith('📝 MEMO_CHANNELS_')) {
-                    // Parse channel memos
-                    messageIds.channels.push(msgId);
+                    allMemoMessages.channels.push({ msgId, message, timestamp: message.createdTimestamp });
                     for (let i = 1; i < lines.length; i++) {
                         const match = lines[i].match(/^(\d+): (.+)$/);
                         if (match) {
@@ -70,16 +71,72 @@ async function loadMemoriesFromChannel() {
                         }
                     }
                 } else if (header === '📝 MEMO_BOT') {
-                    // Parse bot self-memo
-                    messageIds.bot = msgId;
+                    allMemoMessages.bot.push({ msgId, message, timestamp: message.createdTimestamp });
                     botMemo = lines.slice(1).join('\n').trim();
                 }
             } catch (error) {
                 logger.warn(`Bot Memory: Failed to parse message ${msgId}`);
             }
         }
+
+        // Self-healing: keep only the newest memo of each type, delete duplicates
+        await cleanupDuplicateMemos(allMemoMessages);
+
     } catch (error) {
         logger.error('Bot Memory: Failed to load from channel', error);
+    }
+}
+
+/**
+ * Self-healing: delete duplicate memo messages, keep only newest
+ */
+async function cleanupDuplicateMemos(allMemoMessages) {
+    let deletedCount = 0;
+
+    // For users: keep only 1 message (newest)
+    if (allMemoMessages.users.length > 1) {
+        allMemoMessages.users.sort((a, b) => b.timestamp - a.timestamp);
+        messageIds.users = [allMemoMessages.users[0].msgId];
+        for (let i = 1; i < allMemoMessages.users.length; i++) {
+            try {
+                await allMemoMessages.users[i].message.delete();
+                deletedCount++;
+            } catch (e) { /* ignore */ }
+        }
+    } else if (allMemoMessages.users.length === 1) {
+        messageIds.users = [allMemoMessages.users[0].msgId];
+    }
+
+    // For channels: keep only 1 message (newest)
+    if (allMemoMessages.channels.length > 1) {
+        allMemoMessages.channels.sort((a, b) => b.timestamp - a.timestamp);
+        messageIds.channels = [allMemoMessages.channels[0].msgId];
+        for (let i = 1; i < allMemoMessages.channels.length; i++) {
+            try {
+                await allMemoMessages.channels[i].message.delete();
+                deletedCount++;
+            } catch (e) { /* ignore */ }
+        }
+    } else if (allMemoMessages.channels.length === 1) {
+        messageIds.channels = [allMemoMessages.channels[0].msgId];
+    }
+
+    // For bot: keep only 1 message (newest)
+    if (allMemoMessages.bot.length > 1) {
+        allMemoMessages.bot.sort((a, b) => b.timestamp - a.timestamp);
+        messageIds.bot = allMemoMessages.bot[0].msgId;
+        for (let i = 1; i < allMemoMessages.bot.length; i++) {
+            try {
+                await allMemoMessages.bot[i].message.delete();
+                deletedCount++;
+            } catch (e) { /* ignore */ }
+        }
+    } else if (allMemoMessages.bot.length === 1) {
+        messageIds.bot = allMemoMessages.bot[0].msgId;
+    }
+
+    if (deletedCount > 0) {
+        logger.info(`Bot Memory: Self-healing cleaned up ${deletedCount} duplicate memo(s)`);
     }
 }
 
