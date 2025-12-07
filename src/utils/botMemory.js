@@ -7,9 +7,10 @@ const MAX_MEMO_LENGTH = 200;
 // Cache en mémoire
 let userMemos = new Map(); // userId -> memo string
 let channelMemos = new Map(); // channelId -> memo string
+let botMemo = ''; // memo about the bot itself
 let channel = null;
 let client = null;
-let messageIds = { users: [], channels: [] }; // Track message IDs for updates
+let messageIds = { users: [], channels: [], bot: null }; // Track message IDs for updates
 
 /**
  * Initialize the memory system
@@ -25,7 +26,7 @@ export async function initMemory(discordClient, keystoreChannelId) {
         }
 
         await loadMemoriesFromChannel();
-        logger.info(`Bot Memory: Loaded ${userMemos.size} user memos, ${channelMemos.size} channel memos`);
+        logger.info(`Bot Memory: Loaded ${userMemos.size} user memos, ${channelMemos.size} channel memos, bot memo: ${botMemo ? 'yes' : 'no'}`);
     } catch (error) {
         logger.error('Bot Memory: Failed to initialize', error);
     }
@@ -66,6 +67,10 @@ async function loadMemoriesFromChannel() {
                             channelMemos.set(match[1], match[2]);
                         }
                     }
+                } else if (header === '📝 MEMO_BOT') {
+                    // Parse bot self-memo
+                    messageIds.bot = msgId;
+                    botMemo = lines.slice(1).join('\n').trim();
                 }
             } catch (error) {
                 logger.warn(`Bot Memory: Failed to parse message ${msgId}`);
@@ -84,13 +89,16 @@ async function saveMemories() {
 
     try {
         // Delete old memo messages
-        for (const msgId of [...messageIds.users, ...messageIds.channels]) {
+        const allMsgIds = [...messageIds.users, ...messageIds.channels];
+        if (messageIds.bot) allMsgIds.push(messageIds.bot);
+
+        for (const msgId of allMsgIds) {
             try {
                 const msg = await channel.messages.fetch(msgId);
                 await msg.delete();
             } catch (e) { /* ignore */ }
         }
-        messageIds = { users: [], channels: [] };
+        messageIds = { users: [], channels: [], bot: null };
 
         // Save user memos (paginated)
         const userEntries = Array.from(userMemos.entries());
@@ -116,7 +124,13 @@ async function saveMemories() {
             messageIds.channels.push(msg.id);
         }
 
-        logger.debug(`Bot Memory: Saved ${userMemos.size} user memos, ${channelMemos.size} channel memos`);
+        // Save bot self-memo
+        if (botMemo) {
+            const msg = await channel.send(`📝 MEMO_BOT\n${botMemo}`);
+            messageIds.bot = msg.id;
+        }
+
+        logger.debug(`Bot Memory: Saved ${userMemos.size} user memos, ${channelMemos.size} channel memos, bot memo: ${botMemo ? 'yes' : 'no'}`);
     } catch (error) {
         logger.error('Bot Memory: Failed to save', error);
     }
@@ -179,10 +193,22 @@ export function buildMemoryContext(channelId, messageHistory) {
 }
 
 /**
+ * Get bot self-memo
+ */
+export function getBotMemo() {
+    return botMemo;
+}
+
+/**
  * Get formatted memory for prompt
  */
 export function getMemoryForPrompt(channelId, userIds = []) {
     const parts = [];
+
+    // Bot self-memo
+    if (botMemo) {
+        parts.push(`moi: ${botMemo}`);
+    }
 
     // Channel memo
     const chanMemo = channelMemos.get(channelId);
@@ -327,6 +353,70 @@ Règles:
         }
     } catch (error) {
         logger.debug('Bot Memory: Failed to update channel memo', error.message);
+    }
+}
+
+/**
+ * Update bot self-memo via LLM
+ */
+export async function updateBotMemo(userMessage, botResponse, username) {
+    if (!process.env.OPENROUTER_API_KEY) return;
+
+    try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000);
+
+        const response = await fetch(OPENROUTER_API_URL, {
+            signal: controller.signal,
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
+                'Content-Type': 'application/json',
+                'HTTP-Referer': 'https://github.com/cafe-bot',
+                'X-Title': 'Cafe Bot Discord'
+            },
+            body: JSON.stringify({
+                model: 'openai/gpt-4o-mini',
+                messages: [
+                    {
+                        role: 'system',
+                        content: `Tu gères le mémo personnel d'un bot Discord. Max ${MAX_MEMO_LENGTH} caractères.
+
+Mémo actuel: "${botMemo || 'vide'}"
+
+Règles:
+- Retiens ce qu'on dit AU bot sur lui-même (son nom, ses préférences, son rôle, des corrections)
+- Retiens les feedbacks sur son comportement ("parle moins", "sois plus direct", etc)
+- Si rien de pertinent sur le bot lui-même, réponds: UNCHANGED
+- Format compact: "créé par Sofiane, préfère réponses courtes, éviter les emojis"`
+                    },
+                    {
+                        role: 'user',
+                        content: `${username} a dit: "${userMessage}"
+Bot a répondu: "${botResponse}"
+
+Nouveau mémo (ou UNCHANGED):`
+                    }
+                ],
+                temperature: 0.3,
+                max_tokens: 100
+            })
+        });
+
+        clearTimeout(timeoutId);
+
+        if (!response.ok) return;
+
+        const data = await response.json();
+        const newMemo = data.choices?.[0]?.message?.content?.trim();
+
+        if (newMemo && newMemo !== 'UNCHANGED' && newMemo.length <= MAX_MEMO_LENGTH) {
+            botMemo = newMemo;
+            await saveMemories();
+            logger.info(`Bot Memory: Updated bot memo: ${newMemo.substring(0, 50)}...`);
+        }
+    } catch (error) {
+        logger.debug('Bot Memory: Failed to update bot memo', error.message);
     }
 }
 

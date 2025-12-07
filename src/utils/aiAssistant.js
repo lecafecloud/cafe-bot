@@ -1,6 +1,6 @@
 import logger from './logger.js';
 import config from '../config/config.js';
-import { getMemoryForPrompt, updateUserMemo, updateChannelMemo } from './botMemory.js';
+import { getMemoryForPrompt, updateUserMemo, updateChannelMemo, updateBotMemo } from './botMemory.js';
 
 const OPENROUTER_API_URL = 'https://openrouter.ai/api/v1/chat/completions';
 const RATE_LIMIT_WINDOW_MS = 5 * 60 * 1000; // 5 minutes
@@ -665,6 +665,11 @@ exemples:
         if (channelId && context.channelName) {
             updateChannelMemo(channelId, context.channelName, `${username}: ${question}\nBot: ${answer}`).catch(err => {
                 logger.debug('[AI] Failed to update channel memo:', err.message);
+            });
+        }
+        if (username) {
+            updateBotMemo(question, answer, username).catch(err => {
+                logger.debug('[AI] Failed to update bot memo:', err.message);
             });
         }
 
