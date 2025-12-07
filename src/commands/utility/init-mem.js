@@ -1,17 +1,15 @@
 import { SlashCommandBuilder, PermissionFlagsBits, ChannelType } from 'discord.js';
 import config from '../../config/config.js';
 import logger from '../../utils/logger.js';
+import { clearAllMemos, setUserMemo, setChannelMemo, forceSave } from '../../utils/botMemory.js';
 
 const OPENROUTER_API_URL = 'https://openrouter.ai/api/v1/chat/completions';
 const MAX_MEMO_LENGTH = 200;
 
-// Direct access to memo storage (we'll call the LLM directly here)
-import { updateUserMemo, updateChannelMemo } from '../../utils/botMemory.js';
-
 export default {
     data: new SlashCommandBuilder()
         .setName('init-mem')
-        .setDescription('Initialise la mémoire du bot sur les channels et users (Admin)')
+        .setDescription('Réinitialise et génère la mémoire du bot (Admin)')
         .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
         .setDMPermission(false),
 
@@ -33,6 +31,10 @@ export default {
         logger.info(`[INIT-MEM] Started by ${interaction.user.tag}`);
 
         try {
+            // Step 1: Clear all existing memos
+            await interaction.editReply({ content: `🗑️ Suppression des anciens mémos...` });
+            await clearAllMemos();
+
             const guild = interaction.guild;
             const textChannels = guild.channels.cache.filter(
                 ch => ch.type === ChannelType.GuildText && ch.viewable
@@ -40,90 +42,95 @@ export default {
 
             let channelCount = 0;
             let userCount = 0;
-            const processedUsers = new Set();
+            const userProfiles = new Map(); // userId -> { username, messages: [] }
 
-            await interaction.editReply({
-                content: `⏳ Initialisation en cours... 0/${textChannels.size} channels`
-            });
+            // Step 2: Collect all messages from all channels
+            await interaction.editReply({ content: `📥 Collecte des messages... 0/${textChannels.size} channels` });
 
+            let channelIndex = 0;
             for (const [channelId, channel] of textChannels) {
+                channelIndex++;
                 try {
-                    // Fetch recent messages
-                    const messages = await channel.messages.fetch({ limit: 50 });
+                    const messages = await channel.messages.fetch({ limit: 100 });
 
-                    if (messages.size === 0) continue;
-
-                    // Build context for channel memo
-                    const channelContext = [];
-                    const userMessages = new Map(); // userId -> messages[]
+                    const channelMessages = [];
 
                     for (const [, msg] of messages) {
                         if (msg.author.bot) continue;
+                        const content = msg.content.substring(0, 300);
+                        if (content.length < 15) continue;
 
-                        const content = msg.content.substring(0, 200);
-                        if (content.length < 10) continue;
-
-                        channelContext.push(`${msg.author.username}: ${content}`);
+                        channelMessages.push(`${msg.author.username}: ${content}`);
 
                         // Collect user messages
-                        if (!userMessages.has(msg.author.id)) {
-                            userMessages.set(msg.author.id, {
+                        if (!userProfiles.has(msg.author.id)) {
+                            userProfiles.set(msg.author.id, {
                                 username: msg.author.username,
                                 messages: []
                             });
                         }
-                        userMessages.get(msg.author.id).messages.push(content);
+                        userProfiles.get(msg.author.id).messages.push(content);
                     }
 
-                    // Generate channel memo
-                    if (channelContext.length > 0) {
-                        const channelMemo = await generateMemo(
-                            'channel',
-                            channelContext.slice(0, 20).join('\n'),
-                            channel.name
-                        );
-                        if (channelMemo) {
-                            await updateChannelMemo(channelId, channel.name, channelContext.slice(0, 10).join('\n'));
+                    // Generate channel memo if enough content
+                    if (channelMessages.length >= 5) {
+                        const memo = await generateChannelMemo(channel.name, channelMessages.slice(0, 30));
+                        if (memo) {
+                            setChannelMemo(channelId, memo);
                             channelCount++;
+                            logger.info(`[INIT-MEM] Channel #${channel.name}: ${memo.substring(0, 50)}...`);
                         }
                     }
 
-                    // Generate user memos (only for users not yet processed)
-                    for (const [userId, userData] of userMessages) {
-                        if (processedUsers.has(userId)) continue;
-                        if (userData.messages.length < 3) continue; // Need at least 3 messages
-
-                        const userMemo = await generateMemo(
-                            'user',
-                            userData.messages.slice(0, 10).join('\n'),
-                            userData.username
-                        );
-                        if (userMemo) {
-                            await updateUserMemo(
-                                userId,
-                                userData.username,
-                                userData.messages.join(' '),
-                                'init'
-                            );
-                            processedUsers.add(userId);
-                            userCount++;
-                        }
+                    if (channelIndex % 5 === 0) {
+                        await interaction.editReply({
+                            content: `📥 Collecte... ${channelIndex}/${textChannels.size} channels, ${userProfiles.size} users trouvés`
+                        });
                     }
-
-                    // Update progress
-                    await interaction.editReply({
-                        content: `⏳ Initialisation en cours... ${channelCount}/${textChannels.size} channels, ${userCount} users`
-                    });
 
                 } catch (error) {
-                    logger.debug(`[INIT-MEM] Error processing channel ${channel.name}:`, error.message);
+                    logger.debug(`[INIT-MEM] Skip channel ${channel.name}: ${error.message}`);
                 }
             }
+
+            // Step 3: Generate user memos
+            await interaction.editReply({
+                content: `👤 Génération des profils users... 0/${userProfiles.size}`
+            });
+
+            let userIndex = 0;
+            for (const [userId, profile] of userProfiles) {
+                userIndex++;
+
+                // Need at least 5 messages to profile
+                if (profile.messages.length < 5) continue;
+
+                try {
+                    const memo = await generateUserMemo(profile.username, profile.messages.slice(0, 20));
+                    if (memo) {
+                        setUserMemo(userId, memo);
+                        userCount++;
+                        logger.info(`[INIT-MEM] User ${profile.username}: ${memo.substring(0, 50)}...`);
+                    }
+                } catch (error) {
+                    logger.debug(`[INIT-MEM] Skip user ${profile.username}: ${error.message}`);
+                }
+
+                if (userIndex % 10 === 0) {
+                    await interaction.editReply({
+                        content: `👤 Génération des profils... ${userIndex}/${userProfiles.size} (${userCount} créés)`
+                    });
+                }
+            }
+
+            // Step 4: Save to Discord
+            await interaction.editReply({ content: `💾 Sauvegarde...` });
+            await forceSave();
 
             logger.info(`[INIT-MEM] Completed: ${channelCount} channels, ${userCount} users`);
 
             await interaction.editReply({
-                content: `✅ Mémoire initialisée!\n- ${channelCount} channels analysés\n- ${userCount} users profilés`
+                content: `✅ Mémoire réinitialisée!\n\n📊 **Résultats:**\n- ${channelCount} channels analysés\n- ${userCount} users profilés\n- ${userProfiles.size - userCount} users ignorés (< 5 messages)`
             });
 
         } catch (error) {
@@ -136,30 +143,14 @@ export default {
 };
 
 /**
- * Generate a memo using LLM
+ * Generate channel memo from messages
  */
-async function generateMemo(type, context, name) {
+async function generateChannelMemo(channelName, messages) {
     if (!process.env.OPENROUTER_API_KEY) return null;
-
-    const prompts = {
-        channel: {
-            system: `Génère un mémo court (max ${MAX_MEMO_LENGTH} chars) résumant le thème/contexte d'un channel Discord.
-Format: "Débat K8s vs Swarm, questions Terraform"
-Pas de phrases, que des mots-clés.`,
-            user: `Channel #${name}, messages récents:\n${context}\n\nMémo:`
-        },
-        user: {
-            system: `Génère un mémo court (max ${MAX_MEMO_LENGTH} chars) sur un utilisateur Discord basé sur ses messages.
-Identifie: job, technos, centres d'intérêt, personnalité.
-Format: "SRE chez OVH, fan de Terraform, aime les débats"
-Pas de phrases, que des infos clés.`,
-            user: `Messages de ${name}:\n${context}\n\nMémo:`
-        }
-    };
 
     try {
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 10000);
+        const timeoutId = setTimeout(() => controller.abort(), 15000);
 
         const response = await fetch(OPENROUTER_API_URL, {
             signal: controller.signal,
@@ -173,8 +164,19 @@ Pas de phrases, que des infos clés.`,
             body: JSON.stringify({
                 model: 'openai/gpt-4o-mini',
                 messages: [
-                    { role: 'system', content: prompts[type].system },
-                    { role: 'user', content: prompts[type].user }
+                    {
+                        role: 'system',
+                        content: `Analyse ces messages Discord et génère un mémo COURT (max ${MAX_MEMO_LENGTH} chars) décrivant le thème/sujet du channel.
+
+Format attendu: "discussions K8s et Docker, questions débutants, débats infra"
+- Pas de phrases complètes
+- Que des mots-clés et thèmes
+- Sois spécifique au contenu réel`
+                    },
+                    {
+                        role: 'user',
+                        content: `Channel: #${channelName}\n\nMessages:\n${messages.join('\n')}\n\nMémo du channel:`
+                    }
                 ],
                 temperature: 0.3,
                 max_tokens: 100
@@ -182,7 +184,61 @@ Pas de phrases, que des infos clés.`,
         });
 
         clearTimeout(timeoutId);
+        if (!response.ok) return null;
 
+        const data = await response.json();
+        const memo = data.choices?.[0]?.message?.content?.trim();
+
+        return memo && memo.length <= MAX_MEMO_LENGTH ? memo : null;
+
+    } catch (error) {
+        return null;
+    }
+}
+
+/**
+ * Generate user memo from their messages
+ */
+async function generateUserMemo(username, messages) {
+    if (!process.env.OPENROUTER_API_KEY) return null;
+
+    try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 15000);
+
+        const response = await fetch(OPENROUTER_API_URL, {
+            signal: controller.signal,
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
+                'Content-Type': 'application/json',
+                'HTTP-Referer': 'https://github.com/cafe-bot',
+                'X-Title': 'Cafe Bot Discord'
+            },
+            body: JSON.stringify({
+                model: 'openai/gpt-4o-mini',
+                messages: [
+                    {
+                        role: 'system',
+                        content: `Analyse ces messages d'un utilisateur Discord et génère un mémo COURT (max ${MAX_MEMO_LENGTH} chars) le décrivant.
+
+Format attendu: "dev backend Python, bosse chez Datadog, intéressé par K8s"
+- Identifie: métier, technos, entreprise, centres d'intérêt
+- Si pas d'info claire sur un aspect, ne l'invente pas
+- Pas de phrases, que des infos factuelles
+- Base-toi UNIQUEMENT sur ce qu'il dit, pas de suppositions`
+                    },
+                    {
+                        role: 'user',
+                        content: `Messages de ${username}:\n${messages.join('\n')}\n\nMémo sur cet utilisateur:`
+                    }
+                ],
+                temperature: 0.3,
+                max_tokens: 100
+            })
+        });
+
+        clearTimeout(timeoutId);
         if (!response.ok) return null;
 
         const data = await response.json();

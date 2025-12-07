@@ -225,6 +225,54 @@ export function getChannelMemo(channelId) {
 }
 
 /**
+ * Set user memo directly (for init)
+ */
+export function setUserMemo(userId, memo) {
+    if (memo && memo.length <= MAX_MEMO_LENGTH) {
+        userMemos.set(userId, memo);
+    }
+}
+
+/**
+ * Set channel memo directly (for init)
+ */
+export function setChannelMemo(channelId, memo) {
+    if (memo && memo.length <= MAX_MEMO_LENGTH) {
+        channelMemos.set(channelId, memo);
+    }
+}
+
+/**
+ * Clear all memos (for reinit)
+ */
+export async function clearAllMemos() {
+    userMemos.clear();
+    channelMemos.clear();
+    botMemo = '';
+
+    // Delete all memo messages from Discord
+    const allMsgIds = [...messageIds.users, ...messageIds.channels];
+    if (messageIds.bot) allMsgIds.push(messageIds.bot);
+
+    for (const msgId of allMsgIds) {
+        try {
+            const msg = await channel.messages.fetch(msgId);
+            await msg.delete();
+        } catch (e) { /* ignore */ }
+    }
+    messageIds = { users: [], channels: [], bot: null };
+
+    logger.info('Bot Memory: All memos cleared');
+}
+
+/**
+ * Force save now (for init)
+ */
+export async function forceSave() {
+    await saveMemoriesNow();
+}
+
+/**
  * Get context for AI prompt (channel memo + participating users memos)
  */
 export function getMemoryContext(channelId, participantIds = []) {
