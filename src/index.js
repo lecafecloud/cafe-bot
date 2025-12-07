@@ -10,6 +10,7 @@ import { setKeystore as setRoleReactionsKeystore } from './utils/roleReactions.j
 import { setKeystore as setMessageCleanupKeystore, startCleanupJob } from './utils/messageCleanup.js';
 import { setKeystore as setAIKeystore } from './utils/aiAssistant.js';
 import { setKeystore as setReferralKeystore } from './utils/referralSystem.js';
+import { initMemory } from './utils/botMemory.js';
 import { initializeInviteCache } from './events/guildMemberAdd.js';
 import { startReferralValidationJob, stopReferralValidationJob } from './utils/referralValidator.js';
 import { startStatusRotation, stopStatusRotation } from './utils/statusManager.js';
@@ -85,6 +86,9 @@ async function init() {
                     setMessageCleanupKeystore(keystore);
                     setAIKeystore(keystore);
                     setReferralKeystore(keystore);
+
+                    // Initialize bot memory system (separate from keystore)
+                    await initMemory(client, keystoreChannelId);
 
                     logger.info('✅ Discord Keystore initialized successfully!');
 

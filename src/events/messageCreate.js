@@ -201,7 +201,7 @@ async function handleBotMention(message, client) {
         }
 
         // Fetch message history for moderation
-        const messageHistory = await fetchMessageHistory(message.channel, 20);
+        const { history: messageHistory, userIds } = await fetchMessageHistory(message.channel, 20);
 
         // Check referral perks for bypass
         const referralPerks = await getUserReferralPerks(userId);
@@ -264,8 +264,14 @@ async function handleBotMention(message, client) {
 
         logger.info(`[MENTION] ${message.author.tag} asked: ${question}`);
 
-        // Query AI
-        const answer = await queryAI(question, messageHistory);
+        // Query AI with context for memory system
+        const answer = await queryAI(question, messageHistory, {
+            channelId: message.channel.id,
+            channelName: message.channel.name,
+            userId: message.author.id,
+            username: message.author.username,
+            userIds: userIds
+        });
 
         // Sanitize the answer to prevent @everyone/@here mentions
         const sanitizedAnswer = sanitizeMentions(answer);

@@ -37,10 +37,16 @@ export default {
             logger.info(`[QUESTION] User ${interaction.user.tag} asking: ${userQuestion}`);
 
             // Fetch message history
-            const messageHistory = await fetchMessageHistory(interaction.channel, 20);
+            const { history: messageHistory, userIds } = await fetchMessageHistory(interaction.channel, 20);
 
-            // Query AI
-            const answer = await queryAI(userQuestion, messageHistory);
+            // Query AI with context for memory system
+            const answer = await queryAI(userQuestion, messageHistory, {
+                channelId: interaction.channel.id,
+                channelName: interaction.channel.name,
+                userId: interaction.user.id,
+                username: interaction.user.username,
+                userIds: userIds
+            });
 
             // Create response embed
             const embed = new EmbedBuilder()
