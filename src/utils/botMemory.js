@@ -260,16 +260,16 @@ Mémo actuel: "${currentMemo || 'vide'}"
 Règles:
 - Garde les infos importantes: job, technos, préférences, contexte perso
 - Fusionne avec l'existant, pas de redondance
-- Si rien d'intéressant dans l'échange, réponds juste: UNCHANGED
 - Format compact: "SRE chez OVH, préfère Terraform, fan de K8s"
-- Pas de phrases, que des infos clés`
+- Pas de phrases, que des infos clés
+- Retourne TOUJOURS un mémo, même si quasi identique`
                     },
                     {
                         role: 'user',
                         content: `User "${username}" a dit: "${userMessage}"
 Bot a répondu: "${botResponse}"
 
-Nouveau mémo (ou UNCHANGED):`
+Nouveau mémo:`
                     }
                 ],
                 temperature: 0.3,
@@ -284,7 +284,7 @@ Nouveau mémo (ou UNCHANGED):`
         const data = await response.json();
         const newMemo = data.choices?.[0]?.message?.content?.trim();
 
-        if (newMemo && newMemo !== 'UNCHANGED' && newMemo.length <= MAX_MEMO_LENGTH) {
+        if (newMemo && newMemo.length <= MAX_MEMO_LENGTH) {
             userMemos.set(userId, newMemo);
             await saveMemories();
             logger.info(`Bot Memory: Updated memo for ${username}: ${newMemo.substring(0, 50)}...`);
@@ -326,12 +326,12 @@ Mémo actuel: "${currentMemo || 'vide'}"
 
 Règles:
 - Résume le contexte/thème des discussions récentes
-- Si rien de nouveau, réponds: UNCHANGED
-- Format: "Débat K8s vs Swarm, question sur Terraform modules"`
+- Format: "Débat K8s vs Swarm, question sur Terraform modules"
+- Retourne TOUJOURS un mémo, même si quasi identique`
                     },
                     {
                         role: 'user',
-                        content: `Canal #${channelName}, discussions récentes:\n${recentContext}\n\nNouveau mémo (ou UNCHANGED):`
+                        content: `Canal #${channelName}, discussions récentes:\n${recentContext}\n\nNouveau mémo:`
                     }
                 ],
                 temperature: 0.3,
@@ -346,7 +346,7 @@ Règles:
         const data = await response.json();
         const newMemo = data.choices?.[0]?.message?.content?.trim();
 
-        if (newMemo && newMemo !== 'UNCHANGED' && newMemo.length <= MAX_MEMO_LENGTH) {
+        if (newMemo && newMemo.length <= MAX_MEMO_LENGTH) {
             channelMemos.set(channelId, newMemo);
             await saveMemories();
             logger.info(`Bot Memory: Updated memo for #${channelName}: ${newMemo.substring(0, 50)}...`);
@@ -387,15 +387,15 @@ Mémo actuel: "${botMemo || 'vide'}"
 Règles:
 - Retiens ce qu'on dit AU bot sur lui-même (son nom, ses préférences, son rôle, des corrections)
 - Retiens les feedbacks sur son comportement ("parle moins", "sois plus direct", etc)
-- Si rien de pertinent sur le bot lui-même, réponds: UNCHANGED
-- Format compact: "créé par Sofiane, préfère réponses courtes, éviter les emojis"`
+- Format compact: "créé par Sofiane, préfère réponses courtes, éviter les emojis"
+- Retourne TOUJOURS un mémo, même si quasi identique`
                     },
                     {
                         role: 'user',
                         content: `${username} a dit: "${userMessage}"
 Bot a répondu: "${botResponse}"
 
-Nouveau mémo (ou UNCHANGED):`
+Nouveau mémo:`
                     }
                 ],
                 temperature: 0.3,
@@ -410,7 +410,7 @@ Nouveau mémo (ou UNCHANGED):`
         const data = await response.json();
         const newMemo = data.choices?.[0]?.message?.content?.trim();
 
-        if (newMemo && newMemo !== 'UNCHANGED' && newMemo.length <= MAX_MEMO_LENGTH) {
+        if (newMemo && newMemo.length <= MAX_MEMO_LENGTH) {
             botMemo = newMemo;
             await saveMemories();
             logger.info(`Bot Memory: Updated bot memo: ${newMemo.substring(0, 50)}...`);
