@@ -168,10 +168,10 @@ async function generateChannelMemo(channelName, messages) {
                         role: 'system',
                         content: `Analyse ces messages Discord et génère un mémo COURT (max ${MAX_MEMO_LENGTH} chars) décrivant le thème/sujet du channel.
 
-Format attendu: "discussions K8s et Docker, questions débutants, débats infra"
-- Pas de phrases complètes
-- Que des mots-clés et thèmes
-- Sois spécifique au contenu réel`
+Règles:
+- Pas de phrases complètes, que des mots-clés et thèmes
+- Format: mots-clés séparés par virgules
+- N'INVENTE RIEN, base-toi uniquement sur le contenu réel`
                     },
                     {
                         role: 'user',
@@ -222,10 +222,10 @@ async function generateUserMemo(username, messages) {
                         role: 'system',
                         content: `Analyse ces messages d'un utilisateur Discord et génère un mémo COURT (max ${MAX_MEMO_LENGTH} chars) le décrivant.
 
-Format attendu: "dev backend Python, bosse chez Datadog, intéressé par K8s"
+Règles:
 - Identifie: métier, technos, entreprise, centres d'intérêt
-- Si pas d'info claire sur un aspect, ne l'invente pas
-- Pas de phrases, que des infos factuelles
+- Si pas d'info claire sur un aspect, NE L'INVENTE PAS
+- Format: mots-clés séparés par virgules
 - Base-toi UNIQUEMENT sur ce qu'il dit, pas de suppositions`
                     },
                     {

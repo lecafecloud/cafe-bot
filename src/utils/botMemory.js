@@ -380,11 +380,11 @@ export async function updateUserMemo(userId, username, userMessage, botResponse)
 Mémo actuel: "${currentMemo || 'vide'}"
 
 Règles:
-- Garde les infos importantes: job, technos, préférences, contexte perso
+- Garde UNIQUEMENT les infos mentionnées: job, technos, préférences
 - Fusionne avec l'existant, pas de redondance
-- Format compact: "SRE chez OVH, préfère Terraform, fan de K8s"
-- Pas de phrases, que des infos clés
-- Retourne TOUJOURS un mémo, même si quasi identique`
+- Format: mots-clés séparés par virgules
+- N'INVENTE RIEN, garde seulement ce qui est explicitement dit
+- Si rien de nouveau, retourne le mémo actuel tel quel`
                     },
                     {
                         role: 'user',
@@ -448,8 +448,9 @@ Mémo actuel: "${currentMemo || 'vide'}"
 
 Règles:
 - Résume le contexte/thème des discussions récentes
-- Format: "Débat K8s vs Swarm, question sur Terraform modules"
-- Retourne TOUJOURS un mémo, même si quasi identique`
+- Format: mots-clés et thèmes séparés par virgules
+- N'INVENTE RIEN, base-toi uniquement sur le contenu
+- Si rien de nouveau, retourne le mémo actuel tel quel`
                     },
                     {
                         role: 'user',
@@ -508,8 +509,9 @@ Mémo actuel: "${botMemo || 'vide'}"
 
 Règles:
 - Retiens ce qu'on dit AU bot sur lui-même (son nom, ses préférences, son rôle, des corrections)
-- Retiens les feedbacks sur son comportement ("parle moins", "sois plus direct", etc)
-- Format compact: "créé par Sofiane, préfère réponses courtes, éviter les emojis"
+- Retiens les feedbacks sur son comportement
+- Format: mots-clés séparés par virgules
+- N'INVENTE RIEN, garde seulement ce qui est explicitement dit
 - Retourne TOUJOURS un mémo, même si quasi identique`
                     },
                     {
