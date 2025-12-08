@@ -446,11 +446,12 @@ export async function updateChannelMemo(channelId, channelName, recentContext) {
 
 Mémo actuel: "${currentMemo || 'vide'}"
 
-Règles:
-- Résume le contexte et les sujets des discussions récentes
-- Écris des phrases complètes décrivant l'ambiance et les thèmes
-- N'INVENTE RIEN, base-toi uniquement sur le contenu
-- Si rien de nouveau, retourne le mémo actuel tel quel`
+Tâche: Fusionne intelligemment l'ancien mémo avec les nouvelles discussions.
+- Garde les infos importantes de l'ancien mémo (thèmes récurrents, contexte)
+- Ajoute les nouveaux sujets/thèmes pertinents
+- Résume/condense si besoin pour respecter la limite
+- Si rien de nouveau, retourne l'ancien mémo tel quel
+- N'invente rien`
                     },
                     {
                         role: 'user',
