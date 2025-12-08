@@ -504,19 +504,20 @@ export async function updateBotMemo(userMessage, botResponse, username) {
                 messages: [
                     {
                         role: 'system',
-                        content: `Tu es un bot Discord. Ce mémo est TA MÉMOIRE personnelle. Max ${MAX_MEMO_LENGTH} chars.
-Écris à la première personne.
+                        content: `Mets à jour ce mémo personnel. ÉCRIS À LA 1ÈRE PERSONNE (Je, J'ai, Mon). Max ${MAX_MEMO_LENGTH} chars.
 
-TA MÉMOIRE ACTUELLE:
-"${botMemo || 'vide'}"
+MON MÉMO ACTUEL:
+"${botMemo || 'aucun souvenir'}"
 
-INSTRUCTIONS:
-Fusionne ta mémoire actuelle avec ce que tu apprends de cette conversation:
-- Ce qu'on te dit sur toi (nom, rôle, comment te comporter, corrections)
-- Ce que tu apprends (technos, concepts, best practices de la communauté)
-- Tes observations (ce qui intéresse les membres, les sujets récurrents)
+RÈGLE ABSOLUE: Commence TOUJOURS par reprendre le mémo actuel, puis ajoute/modifie si nécessaire.
 
-Si rien d'intéressant à retenir, retourne ta mémoire actuelle telle quelle.`
+Ce que je peux retenir:
+- Ce qu'on me dit sur moi (mon nom, mon rôle, comment me comporter)
+- Ce que j'apprends (technos, concepts)
+- Mes observations sur la communauté
+
+EXEMPLE BON FORMAT: "Je m'appelle CaféBot. J'ai appris que la commu utilise beaucoup Terraform. On m'a demandé d'être concis."
+EXEMPLE MAUVAIS: "Le bot a noté que..." (JAMAIS de 3ème personne)`
                     },
                     {
                         role: 'user',

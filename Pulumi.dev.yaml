@@ -1,9 +1,9 @@
 secretsprovider: awskms://alias/cafe-bot-pulumi
-encryptedkey: AQICAHjJy8mJK2/iixSGe67R9keH80YkoJK2Qw1yU6dbqmzPKgH++415KIy3rGtfEh0LTUEYAAAAfjB8BgkqhkiG9w0BBwagbzBtAgEAMGgGCSqGSIb3DQEHATAeBglghkgBZQMEAS4wEQQMEW/g9Aigb4+40t/6AgEQgDuhlHPSK2p3kpt85oBoZeps6/ttvdmPTSxwdlysnRFLOy+8MXMK+FIW8Au9Os4eHGizOJiQ5+l0nufEhQ==
+encryptedkey: AQICAHjJy8mJK2/iixSGe67R9keH80YkoJK2Qw1yU6dbqmzPKgGnEbphMxcK+Kh3CCBBdBDtAAAAfjB8BgkqhkiG9w0BBwagbzBtAgEAMGgGCSqGSIb3DQEHATAeBglghkgBZQMEAS4wEQQMTosVDJCt7B5OFyxlAgEQgDtKYCxyO1Mn2Ky6u77nOzcjszs8ZGueWoGa3W9hK+AhPRG4PJsgM/ST0RzzLE/yg8VD/YOqkYALEkwPPw==
 config:
   cafe-bot:discordToken:
-    secure: v1:B/90CklAg1QsPqy+:DrBvS03ZvZDpvCH3Cx0WWoGlpCXz19T1TUOMVedxQP97ooQDrnqSPd0Usn8sAQsu3nMRA6rWyW71UTmc9nu32ce7gMH5oP5/lGt3kQEBW4RE3KNmxt3kMQ==
+    secure: v1:LRKkQEmgf33fRzr/:e7KI8v42f5VEG6ZW9TZxl/lbvGRSzMhnIz+JVqym30y0TqJcGi9ZYqWScyqXx1TGkFf0Mcw3As3zYgECVjFVVmdXqGaHk2w7TsIsuj/sIdcgB9t4uRd3wA==
   cafe-bot:clientId:
-    secure: v1:Z9X0M3XFRXG+b56O:IxfUA41t5nG0aXtKzhwOwGnC/u8OiNPVmRzOCwaytesfAkc=
+    secure: v1:h2hjl6CmamY11yNe:nlVerVUjThRVZrAxkB20sAUwstsfIBCWrqNXaiPY+WYrgzA=
   aws:region: us-east-1
   cafe-bot:dockerBuilder: cafe-bot-builder
