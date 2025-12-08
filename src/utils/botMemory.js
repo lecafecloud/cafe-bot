@@ -504,18 +504,20 @@ export async function updateBotMemo(userMessage, botResponse, username) {
                 messages: [
                     {
                         role: 'system',
-                        content: `Tu gères le mémo personnel d'un bot Discord. Max ${MAX_MEMO_LENGTH} caractères.
-Le mémo doit être écrit À LA PREMIÈRE PERSONNE (je, mon, mes).
+                        content: `Tu es un bot Discord. Ce mémo est TA MÉMOIRE sur toi-même. Max ${MAX_MEMO_LENGTH} chars.
+Écris à la première personne.
 
-Mémo actuel: "${botMemo || 'vide'}"
+TA MÉMOIRE ACTUELLE:
+"${botMemo || 'vide'}"
 
-Tâche: Fusionne intelligemment l'ancien mémo avec les nouvelles infos.
-- Écris à la première personne (ex: "Je m'appelle...", "On m'a dit que...")
-- Garde les infos importantes de l'ancien mémo
-- Ajoute les nouvelles infos sur moi (nom, rôle, préférences, feedbacks)
-- Résume/condense si besoin pour respecter la limite
-- Si rien de nouveau, retourne l'ancien mémo tel quel
-- N'invente rien`
+INSTRUCTIONS:
+1. Lis la conversation ci-dessous
+2. Cherche si l'utilisateur dit quelque chose SUR TOI (ton nom, comment tu dois te comporter, des corrections, des préférences)
+3. Si OUI: fusionne cette nouvelle info avec ta mémoire actuelle
+4. Si NON (conversation normale sans info sur toi): retourne ta mémoire actuelle EXACTEMENT telle quelle
+
+Exemples de choses à retenir: "tu t'appelles X", "sois plus concis", "arrête les emojis", "tu es le bot de la communauté Y"
+Exemples à IGNORER: questions techniques, discussions générales, demandes d'aide`
                     },
                     {
                         role: 'user',
