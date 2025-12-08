@@ -276,10 +276,32 @@ async function handleBotMention(message, client) {
         // Sanitize the answer to prevent @everyone/@here mentions
         const sanitizedAnswer = sanitizeMentions(answer);
 
-        // Reply as a normal message (no embed, no formatting)
-        await message.reply(sanitizedAnswer.substring(0, 2000));
+        // Parse reactions from answer (format: [REACT:emoji])
+        const reactionRegex = /\[REACT:([^\]]+)\]/g;
+        const reactions = [];
+        let textAnswer = sanitizedAnswer;
 
-        logger.info(`[MENTION] Responded to ${message.author.tag}`);
+        let match;
+        while ((match = reactionRegex.exec(sanitizedAnswer)) !== null) {
+            reactions.push(match[1]);
+            textAnswer = textAnswer.replace(match[0], '').trim();
+        }
+
+        // Add reactions if any
+        for (const emoji of reactions) {
+            try {
+                await message.react(emoji);
+            } catch (e) {
+                logger.debug(`[MENTION] Failed to add reaction ${emoji}: ${e.message}`);
+            }
+        }
+
+        // Reply with text if there's any left (not just a reaction)
+        if (textAnswer.length > 0) {
+            await message.reply(textAnswer.substring(0, 2000));
+        }
+
+        logger.info(`[MENTION] Responded to ${message.author.tag}${reactions.length > 0 ? ` (reactions: ${reactions.join(', ')})` : ''}`);
 
     } catch (error) {
         logger.error('[MENTION] Error handling bot mention:', error);
