@@ -379,12 +379,12 @@ export async function updateUserMemo(userId, username, userMessage, botResponse)
 
 Mémo actuel: "${currentMemo || 'vide'}"
 
-Règles:
-- Garde les infos mentionnées: job, technos, entreprise, projets, préférences
-- Écris des phrases complètes et naturelles
-- Fusionne avec l'existant, pas de redondance
-- N'INVENTE RIEN, garde seulement ce qui est explicitement dit
-- Si rien de nouveau, retourne le mémo actuel tel quel`
+Tâche: Fusionne intelligemment l'ancien mémo avec les nouvelles infos.
+- Garde les infos importantes de l'ancien mémo
+- Ajoute les nouvelles infos pertinentes (job, technos, projets, préférences)
+- Résume/condense si besoin pour respecter la limite
+- Si rien de nouveau, retourne l'ancien mémo tel quel
+- N'invente rien`
                     },
                     {
                         role: 'user',
@@ -507,12 +507,12 @@ export async function updateBotMemo(userMessage, botResponse, username) {
 
 Mémo actuel: "${botMemo || 'vide'}"
 
-Règles:
-- Retiens ce qu'on dit AU bot sur lui-même (son nom, ses préférences, son rôle, des corrections)
-- Retiens les feedbacks sur son comportement
-- Écris des phrases complètes et naturelles
-- N'INVENTE RIEN, garde seulement ce qui est explicitement dit
-- Retourne TOUJOURS un mémo, même si quasi identique`
+Tâche: Fusionne intelligemment l'ancien mémo avec les nouvelles infos.
+- Garde les infos importantes de l'ancien mémo
+- Ajoute les nouvelles infos sur le bot (nom, rôle, préférences, feedbacks)
+- Résume/condense si besoin pour respecter la limite
+- Si rien de nouveau sur le bot, retourne l'ancien mémo tel quel
+- N'invente rien`
                     },
                     {
                         role: 'user',
