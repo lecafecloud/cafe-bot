@@ -374,7 +374,7 @@ export async function moderateMessage(userMessage, messageHistory, username, use
                 'X-Title': 'Cafe Bot Discord'
             },
             body: JSON.stringify({
-                model: 'openai/gpt-4-turbo-preview',
+                model: 'openai/gpt-5-mini',
                 messages: [
                     {
                         role: 'system',
@@ -575,7 +575,7 @@ export async function queryAI(question, messageHistory, context = {}) {
                 'X-Title': 'Cafe Bot Discord'
             },
             body: JSON.stringify({
-                model: 'openai/gpt-4-turbo-preview',
+                model: 'openai/gpt-5.2',
                 messages: [
                     {
                         role: 'system',

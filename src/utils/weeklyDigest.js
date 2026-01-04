@@ -167,7 +167,7 @@ Génère un digest INSTRUCTIF qui synthétise les apprentissages clés.`;
                 'X-Title': 'Cafe Bot Discord'
             },
             body: JSON.stringify({
-                model: 'openai/gpt-4-turbo-preview',
+                model: 'openai/gpt-5.2',
                 messages: [
                     { role: 'system', content: systemPrompt },
                     { role: 'user', content: userPrompt }

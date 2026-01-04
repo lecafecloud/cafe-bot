@@ -65,7 +65,7 @@ Règles:
                 'X-Title': 'Cafe Bot Discord'
             },
             body: JSON.stringify({
-                model: 'openai/gpt-4-turbo-preview',
+                model: 'openai/gpt-5.2',
                 messages: [
                     {
                         role: 'system',

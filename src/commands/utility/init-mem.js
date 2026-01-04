@@ -162,7 +162,7 @@ async function generateChannelMemo(channelName, messages) {
                 'X-Title': 'Cafe Bot Discord'
             },
             body: JSON.stringify({
-                model: 'openai/gpt-4o-mini',
+                model: 'openai/gpt-5-mini',
                 messages: [
                     {
                         role: 'system',
@@ -216,7 +216,7 @@ async function generateUserMemo(username, messages) {
                 'X-Title': 'Cafe Bot Discord'
             },
             body: JSON.stringify({
-                model: 'openai/gpt-4o-mini',
+                model: 'openai/gpt-5-mini',
                 messages: [
                     {
                         role: 'system',

@@ -371,7 +371,7 @@ export async function updateUserMemo(userId, username, userMessage, botResponse)
                 'X-Title': 'Cafe Bot Discord'
             },
             body: JSON.stringify({
-                model: 'openai/gpt-4o-mini',
+                model: 'openai/gpt-5-mini',
                 messages: [
                     {
                         role: 'system',
@@ -438,7 +438,7 @@ export async function updateChannelMemo(channelId, channelName, recentContext) {
                 'X-Title': 'Cafe Bot Discord'
             },
             body: JSON.stringify({
-                model: 'openai/gpt-4o-mini',
+                model: 'openai/gpt-5-mini',
                 messages: [
                     {
                         role: 'system',
@@ -500,7 +500,7 @@ export async function updateBotMemo(userMessage, botResponse, username) {
                 'X-Title': 'Cafe Bot Discord'
             },
             body: JSON.stringify({
-                model: 'openai/gpt-4o-mini',
+                model: 'openai/gpt-5-mini',
                 messages: [
                     {
                         role: 'system',

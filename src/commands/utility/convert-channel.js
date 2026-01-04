@@ -208,7 +208,7 @@ async function analyzeAndGroupMessages(messages, channelName, channelDescription
                 'X-Title': 'Cafe Bot Discord'
             },
             body: JSON.stringify({
-                model: 'openai/gpt-4-turbo-preview', // Using GPT-4 for reliability
+                model: 'openai/gpt-5-mini',
                 messages: [
                     {
                         role: 'system',

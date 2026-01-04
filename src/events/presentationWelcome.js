@@ -81,6 +81,13 @@ export default {
                 memberRole
             );
 
+            // React to the presentation
+            try {
+                await message.react('👋');
+            } catch (reactError) {
+                logger.error('[WELCOME] Failed to react:', reactError);
+            }
+
             // Send welcome message
             if (welcomeMessage) {
                 await message.reply({
@@ -126,7 +133,7 @@ async function generateWelcomeMessage(userId, username, presentationContent, gui
                 'X-Title': 'Cafe Bot Discord'
             },
             body: JSON.stringify({
-                model: 'openai/gpt-4-turbo-preview',
+                model: 'openai/gpt-5-mini',
                 messages: [
                     {
                         role: 'system',
