@@ -1,34 +1,44 @@
 {
-  "name": "cafe-bot",
-  "version": "1.0.0",
-  "description": "A modern Discord bot with best practices",
-  "main": "src/index.js",
-  "type": "module",
-  "scripts": {
-    "start": "node src/index.js",
-    "dev": "nodemon src/index.js",
-    "deploy": "node src/deploy-commands.js"
-  },
-  "keywords": [
-    "discord",
-    "bot",
-    "discord.js"
-  ],
-  "author": "",
-  "license": "MIT",
-  "dependencies": {
-    "@pulumi/aws": "^7.7.0",
-    "@pulumi/docker": "^4.9.0",
-    "@pulumi/pulumi": "^3.200.0",
-    "chalk": "^5.3.0",
-    "discord.js": "^14.16.3",
-    "dotenv": "^16.4.7",
-    "node-cron": "^3.0.3",
-    "node-fetch": "^3.3.2",
-    "winston": "^3.17.0"
-  },
-  "devDependencies": {
-    "eslint": "^9.17.0",
-    "nodemon": "^3.1.9"
-  }
+    "name": "cafe-bot",
+    "version": "1.0.0",
+    "description": "A modern Discord bot with best practices",
+    "main": "build/index.js",
+    "type": "module",
+    "scripts": {
+        "dev": "ts-node-dev src/index.ts",
+        "build": "tsc",
+        "start": "node build/index.js",
+        "deploy": "ts-node src/deploy-commands.ts"
+    },
+    "keywords": [
+        "discord",
+        "bot",
+        "discord.js"
+    ],
+    "author": "",
+    "license": "MIT",
+    "dependencies": {
+        "@pulumi/aws": "^7.7.0",
+        "@pulumi/docker": "^4.9.0",
+        "@pulumi/pulumi": "^3.200.0",
+        "chalk": "^5.3.0",
+        "discord.js": "^14.16.3",
+        "dotenv": "^16.4.7",
+        "node-cron": "^3.0.3",
+        "node-fetch": "^3.3.2",
+        "winston": "^3.17.0"
+    },
+    "devDependencies": {
+        "eslint": "^9.17.0",
+        "ts-node": "^10.9.2",
+        "ts-node-dev": "^2.0.0",
+        "typescript": "^5.8.3"
+    },
+    "overrides": {
+        "glob": "13.0.0",
+        "rimraf": "6.1.2",
+        "some-package": {
+            "inflight": "npm:lru-cache@11.2.2"
+        }
+    }
 }
